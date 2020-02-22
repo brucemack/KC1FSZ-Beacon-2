@@ -1,2 +1,7 @@
 .cproject
 .mxproject
+Debug/
+Drivers/
+Core/Startup
+.project
+.settings
