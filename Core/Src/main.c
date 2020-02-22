@@ -23,6 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "Driver.h"
 
 /* USER CODE END Includes */
 
@@ -91,15 +92,15 @@ int main(void)
   MX_GPIO_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
+  Driver_init();
 
   /* USER CODE END 2 */
- 
- 
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  Driver_loop();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

@@ -25,7 +25,7 @@ extern I2C_HandleTypeDef hi2c1;
 class SystemEnv1 : public kc1fsz::SystemEnv {
 public:
 
-	long getTimeMs() {
+	uint32_t getTimeMs() {
 		return HAL_GetTick();
 	}
 };
@@ -130,7 +130,7 @@ void Driver_loop() {
 
 	/*
 	// Flash the LED
-	if (HAL_GetTick() - lastStrobe > 1000) {
+	if (HAL_GetTick() - lastStrobe > 250) {
 		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 		lastStrobe = HAL_GetTick();
 	}

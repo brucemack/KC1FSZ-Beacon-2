@@ -5,3 +5,5 @@ Drivers/
 Core/Startup
 .project
 .settings
+.DS_Store
+Core/.DS_Store
