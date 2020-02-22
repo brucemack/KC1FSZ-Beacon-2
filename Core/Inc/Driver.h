@@ -8,10 +8,15 @@
 #ifndef SRC_DRIVER_H_
 #define SRC_DRIVER_H_
 
-class Driver {
-public:
-	Driver();
-	virtual ~Driver();
-};
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void Driver_init();
+void Driver_loop();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* SRC_DRIVER_H_ */
