@@ -5,10 +5,13 @@
  *      Author: Bruce MacKinnon KC1FSZ
  */
 
+#include <stdio.h>
 #include "Driver.h"
 
 extern "C" {
 #include "main.h"
+#include "ssd1306.h"
+
 #if defined(STM32F1)
 #include "stm32f1xx_hal.h"
 #endif
@@ -57,12 +60,27 @@ static VFO1 vfo1;
 // Wrap the LED in the status indicator interface
 class Ind1 : public kc1fsz::StatusIndicator {
 public:
-	void setState(bool s) {
+	void setLight(bool s) {
 		if (s) {
 			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 		} else {
 			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 		}
+	}
+	/**
+	 * Render a short message on the top right of the display
+	 */
+	void setMessage(const char* msg) {
+		char buf[9];
+		int i;
+		for (i = 0; i < 8 && msg[i] != 0; i++)
+			buf[i] = msg[i];
+		for (;i < 8; i++)
+			buf[i] = ' ';
+		buf[i] = 0;
+		ssd1306_SetCursor(64, 0);
+		ssd1306_WriteString(buf, Font_7x10, White);
+		ssd1306_UpdateScreen();
 	}
 };
 static Ind1 ind1;
@@ -107,22 +125,48 @@ static const char* msg =
 "\r\n"
 "SK\r\n";
 
+static void Driver_displayFreq(unsigned int freq) {
+	char buf[32];
+	int x = 50;
+	// Print whole KHz
+	sprintf(buf,"%5d",freq / 1000);
+	ssd1306_SetCursor(x, 12);
+	ssd1306_WriteString(buf, Font_11x18, White);
+	// Print 100Hz increments
+	sprintf(buf,".%d",(freq % 1000) / 100);
+	ssd1306_SetCursor(x + 55, 12);
+	ssd1306_WriteString(buf, Font_11x18, White);
+	ssd1306_UpdateScreen();
+}
+
 void Driver_init() {
 
 	si5351aInit(&ic21);
+
+	ssd1306_Init();
+	ssd1306_Fill(Black);
+	// Logo
+	ssd1306_SetCursor(0, 0);
+	ssd1306_WriteString((char*)"KC1FSZ", Font_7x10, White);
+	for (int x = 0; x < 128; x++)
+		ssd1306_DrawPixel(x, 10, White);
+	ssd1306_UpdateScreen();
+
+	// Toggle (diagnostics)
+	for (int i = 0; i < 4; i++) {
+		ind1.setLight(true);
+		HAL_Delay(250);
+		ind1.setLight(false);
+		HAL_Delay(250);
+	}
+
+	Driver_displayFreq(freq);
+
 	// Set the transmit frequency
 	encoder.setFreq(freq);
 	// Setup the message to be broadcast on the
 	encoder.queueMessage(msg);
 	encoder.start();
-
-	// Toggle (diagnostics)
-	for (int i = 0; i < 4; i++) {
-		ind1.setState(true);
-		HAL_Delay(250);
-		ind1.setState(false);
-		HAL_Delay(250);
-	}
 }
 
 long lastStrobe = 0;
