@@ -45,14 +45,23 @@ class VFO1 : public kc1fsz::VFOInterface {
 public:
 
 	void setOutputEnabled(bool e) {
-		if (!e) {
-			si5351aOutputOff(0);
+		if (e != _enabled) {
+			if (!e)
+				si5351aOutputOff(1);
+			else
+				si5351aOutputOff(0);
+			_enabled = e;
 		}
 	}
 
 	void setFrequency(unsigned int freqHz) {
-		si5351aSetFrequency(freqHz);
+		// NOTE: No reset here since we should not be moving far from the base
+		si5351aSetFrequency(freqHz, false);
 	}
+
+private:
+
+	bool _enabled = false;
 };
 static VFO1 vfo1;
 
@@ -142,6 +151,8 @@ static void Driver_displayFreq(unsigned int freq) {
 void Driver_init() {
 
 	si5351aInit(&ic21);
+	// Set frequency and force a reset
+	si5351aSetFrequency(freq, true);
 
 	ssd1306_Init();
 	ssd1306_Fill(Black);
