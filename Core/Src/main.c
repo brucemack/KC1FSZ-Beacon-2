@@ -93,7 +93,6 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   Driver_init();
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -207,10 +206,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : BUT0_Pin BUT1_Pin ENCB_Pin ENC1_Pin 
-                           ENC0_Pin */
-  GPIO_InitStruct.Pin = BUT0_Pin|BUT1_Pin|ENCB_Pin|ENC1_Pin 
-                          |ENC0_Pin;
+  /*Configure GPIO pins : BUT0_Pin BUT1_Pin */
+  GPIO_InitStruct.Pin = BUT0_Pin|BUT1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -221,6 +218,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(OUT0_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : ENC1_Pin */
+  GPIO_InitStruct.Pin = ENC1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(ENC1_GPIO_Port, &GPIO_InitStruct);
 
 }
 

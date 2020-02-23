@@ -2,14 +2,16 @@
  * Driver.cpp
  *
  *  Created on: Feb 22, 2020
- *      Author: bruce
+ *      Author: Bruce MacKinnon KC1FSZ
  */
 
 #include "Driver.h"
 
 extern "C" {
 #include "main.h"
+#if defined(STM32F1)
 #include "stm32f1xx_hal.h"
+#endif
 }
 
 #include "I2CInterface.h"
@@ -17,8 +19,6 @@ extern "C" {
 #include "VFOInterface.h"
 #include "SystemEnv.h"
 #include "RttyEncoder.h"
-
-extern I2C_HandleTypeDef hi2c1;
 
 // ----------------------------------------------------------------------------
 // Get the system environment
@@ -33,6 +33,7 @@ static SystemEnv1 sysenv1;
 
 // ----------------------------------------------------------------------------
 // Wrap the I2C interface so that the Si5351 library can talk to it
+extern I2C_HandleTypeDef hi2c1;
 static kc1fsz::I2CInterface ic21(&hi2c1);
 
 // ----------------------------------------------------------------------------
@@ -70,9 +71,10 @@ static Ind1 ind1;
 // Get the RTTY encoder integrated with the hardware
 static kc1fsz::RttyEncoder encoder(&sysenv1, &vfo1, &ind1);
 
-// Bulletin message
+static const unsigned int freq = 7040000;
 
-const char* Msg =
+// Bulletin message
+static const char* msg =
 "\r\n"
 "\r\n"
 "\r\n"
@@ -109,30 +111,22 @@ void Driver_init() {
 
 	si5351aInit(&ic21);
 	// Set the transmit frequency
-	encoder.setFreq(7050000);
+	encoder.setFreq(freq);
 	// Setup the message to be broadcast on the
-	encoder.queueMessage(Msg);
+	encoder.queueMessage(msg);
+	encoder.start();
 
-	// Toggle
+	// Toggle (diagnostics)
 	for (int i = 0; i < 4; i++) {
 		ind1.setState(true);
-		HAL_Delay(500);
+		HAL_Delay(250);
 		ind1.setState(false);
-		HAL_Delay(500);
+		HAL_Delay(250);
 	}
 }
 
 long lastStrobe = 0;
 
 void Driver_loop() {
-
 	encoder.poll();
-
-	/*
-	// Flash the LED
-	if (HAL_GetTick() - lastStrobe > 250) {
-		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-		lastStrobe = HAL_GetTick();
-	}
-	*/
 }

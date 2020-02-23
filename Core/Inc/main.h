@@ -66,12 +66,8 @@ void Error_Handler(void);
 #define BUT1_GPIO_Port GPIOB
 #define OUT0_Pin GPIO_PIN_14
 #define OUT0_GPIO_Port GPIOB
-#define ENCB_Pin GPIO_PIN_3
-#define ENCB_GPIO_Port GPIOB
 #define ENC1_Pin GPIO_PIN_4
 #define ENC1_GPIO_Port GPIOB
-#define ENC0_Pin GPIO_PIN_5
-#define ENC0_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
