@@ -18,14 +18,15 @@ extern "C" {
 #endif
 }
 
-#include "I2CInterface.h"
 #include "VFOInterface.h"
 #include "Debouncer.h"
 #include "SystemEnv.h"
 #include "RttyEncoder.h"
 #include "WsprEncoder.h"
 
-//#include "si5351-etherkit.h"
+// This is needed to enable communication with the Si5351/a
+#include "STM32_HAL_Interface.h"
+// Ehterkit
 #include "si5351.h"
 
 // ----------------------------------------------------------------------------
@@ -42,32 +43,30 @@ static SystemEnv1 sysenv1;
 // ----------------------------------------------------------------------------
 // Wrap the I2C interface so that the Si5351 library can talk to it
 extern I2C_HandleTypeDef hi2c1;
-static kc1fsz::I2CInterface i2c1(&hi2c1);
+static STM32_HAL_Interface i2c_interface(&hi2c1);
+static Si5351 si5351(0x60, &i2c_interface);
 
 // ----------------------------------------------------------------------------
 // Wrap the SI5351 library in the VFOInterface
-
-//static Si5351 pll(0x60, &i2c1);
 
 class VFO1 : public kc1fsz::VFOInterface {
 public:
 
 	void setOutputEnabled(bool e) {
-		//pll.output_enable(SI5351_CLK0, (e == true) ? 1 : 0);
-		si5351aOutputEnable(e);
+		if (e) {
+			si5351.set_clock_disable(SI5351_CLK0, si5351_clock_disable::SI5351_CLK_DISABLE_LOW);
+		} else {
+			si5351.set_clock_disable(SI5351_CLK0, si5351_clock_disable::SI5351_CLK_DISABLE_HIGH);
+		}
 	}
 
 	void setFrequency(double freqHz) {
-		//double sf = freqHz * (double)100.0;
-		//uint64_t f = (uint64_t)sf;
-		//pll.set_freq(f, SI5351_CLK0);
-		si5351aSetFrequency((uint32_t)freqHz, false);
+		unsigned long long f = freqHz;
+		f = f * 100ULL;
+		 si5351.set_freq(f, SI5351_CLK0);
 	}
-
-private:
-
-	bool _enabled = false;
 };
+
 static VFO1 vfo1;
 
 // ----------------------------------------------------------------------------
@@ -169,14 +168,19 @@ void Driver_init() {
 	//pll.set_freq(703860000ULL, SI5351_CLK0);
 	//pll.reset();
 
-	si5351aInit(&i2c1);
-	si5351aSetFrequency(7040000, true);
+	//si5351aInit(&i2c1);
+	//si5351aSetFrequency(7040000, true);
+
+	bool i2c_found = si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
 
 	ssd1306_Init();
 	ssd1306_Fill(Black);
 	// Logo
 	ssd1306_SetCursor(0, 0);
-	ssd1306_WriteString((char*)"KC1FSZ", Font_7x10, White);
+	if (!i2c_found)
+		ssd1306_WriteString((char*)"ERROR", Font_7x10, White);
+	else
+		ssd1306_WriteString((char*)"KC1FSZ", Font_7x10, White);
 	for (int x = 0; x < 128; x++)
 		ssd1306_DrawPixel(x, 10, White);
 	ssd1306_UpdateScreen();
