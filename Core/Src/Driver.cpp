@@ -26,11 +26,11 @@ extern "C" {
 
 // This is needed to enable communication with the Si5351/a
 #include "STM32_HAL_Interface.h"
-// Ehterkit
+// Ehterkit library (with modifications)
 #include "si5351.h"
 
 // ----------------------------------------------------------------------------
-// Get the system environment
+// Get the system environment hooked up
 class SystemEnv1 : public kc1fsz::SystemEnv {
 public:
 
@@ -47,24 +47,33 @@ static STM32_HAL_Interface i2c_interface(&hi2c1);
 static Si5351 si5351(0x60, &i2c_interface);
 
 // ----------------------------------------------------------------------------
-// Wrap the SI5351 library in the VFOInterface
-
+// Wrap the SI5351 in the VFOInterface so that the encoders
+// can talk to it.
 class VFO1 : public kc1fsz::VFOInterface {
 public:
 
 	void setOutputEnabled(bool e) {
-		if (e) {
-			si5351.set_clock_disable(SI5351_CLK0, si5351_clock_disable::SI5351_CLK_DISABLE_LOW);
-		} else {
-			si5351.set_clock_disable(SI5351_CLK0, si5351_clock_disable::SI5351_CLK_DISABLE_HIGH);
+		if (e != _enabled) {
+			_enabled = e;
+			if (e) {
+				 si5351.set_clock_pwr(SI5351_CLK0, 1);
+			} else {
+				// This is how the Etherkit demo turn off the output
+				si5351.set_clock_pwr(SI5351_CLK0, 0);
+			}
 		}
 	}
 
 	void setFrequency(double freqHz) {
 		unsigned long long f = freqHz;
-		f = f * 100ULL;
-		 si5351.set_freq(f, SI5351_CLK0);
+		_freq = f * 100ULL;
+		si5351.set_freq(_freq, SI5351_CLK0);
 	}
+
+private:
+
+	bool _enabled = false;
+	unsigned long long _freq;
 };
 
 static VFO1 vfo1;
@@ -103,14 +112,14 @@ static Ind1 ind1;
 static kc1fsz::Debouncer but0(&sysenv1, 20);
 
 // ----------------------------------------------------------------------------
-// Get the RTTY encoder integrated with the hardware
-static kc1fsz::RttyEncoder encoder(&sysenv1, &vfo1, &ind1);
-//static kc1fsz::WsprEncoder encoder(&sysenv1, &vfo1, &ind1);
+// Get the encoder integrated with the hardware
+//static kc1fsz::RttyEncoder encoder(&sysenv1, &vfo1, &ind1);
+static kc1fsz::WsprEncoder encoder(&sysenv1, &vfo1, &ind1);
 
 // RTTY
-static const unsigned int freq = 7040000;
+//static const unsigned int freq = 7040000;
 // WSPR
-//static const unsigned int freq = 7038600;
+static const unsigned int freq = 7038600 + 1500;
 
 // Bulletin message
 static const char* msg =
@@ -162,28 +171,19 @@ static void Driver_displayFreq(unsigned int freq) {
 
 void Driver_init() {
 
-	// Initialization
-	//bool pll_ok = pll.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
-	//pll.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA);
-	//pll.set_freq(703860000ULL, SI5351_CLK0);
-	//pll.reset();
+	// Initialize the Si5351/A
+	si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
 
-	//si5351aInit(&i2c1);
-	//si5351aSetFrequency(7040000, true);
-
-	bool i2c_found = si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);
-
+	// Initialize the display
 	ssd1306_Init();
 	ssd1306_Fill(Black);
 	// Logo
 	ssd1306_SetCursor(0, 0);
-	if (!i2c_found)
-		ssd1306_WriteString((char*)"ERROR", Font_7x10, White);
-	else
-		ssd1306_WriteString((char*)"KC1FSZ", Font_7x10, White);
+	ssd1306_WriteString((char*)"KC1FSZ", Font_7x10, White);
 	for (int x = 0; x < 128; x++)
 		ssd1306_DrawPixel(x, 10, White);
 	ssd1306_UpdateScreen();
+
 /*
 	// Toggle (diagnostics)
 	for (int i = 0; i < 4; i++) {
@@ -198,10 +198,11 @@ void Driver_init() {
 	// Set the transmit frequency
 	encoder.setFreq(freq);
 	// Setup the message to be broadcast on the
-	encoder.queueMessage(msg);
-	encoder.setLoop(true);
+	//encoder.queueMessage(msg);
+	//encoder.setLoop(true);
 	// Setup parameters for WSPR
-	//encoder.setParameters("KC1FSZ","FN42",7);
+	// 24 dBm = 0.25 watts, 10 Vpp into a 50 ohm load
+	encoder.setParameters("KC1FSZ","FN42",24);
 	encoder.start();
 }
 
