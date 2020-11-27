@@ -119,7 +119,7 @@ static kc1fsz::WsprEncoder encoder(&sysenv1, &vfo1, &ind1);
 // RTTY
 //static const unsigned int freq = 7040000;
 // WSPR
-static const unsigned int freq = 7038600 + 1500;
+static unsigned int freq = 7038600;
 
 // Bulletin message
 static const char* msg =
@@ -184,24 +184,17 @@ void Driver_init() {
 		ssd1306_DrawPixel(x, 10, White);
 	ssd1306_UpdateScreen();
 
-/*
-	// Toggle (diagnostics)
-	for (int i = 0; i < 4; i++) {
-		ind1.setLight(true);
-		HAL_Delay(250);
-		ind1.setLight(false);
-		HAL_Delay(250);
-	}
-*/
 	Driver_displayFreq(freq);
 
 	// Set the transmit frequency
 	encoder.setFreq(freq);
+
 	// Setup the message to be broadcast on the
 	//encoder.queueMessage(msg);
 	//encoder.setLoop(true);
 	// Setup parameters for WSPR
 	// 24 dBm = 0.25 watts, 10 Vpp into a 50 ohm load
+	encoder.setOffsetFreq(1500);
 	encoder.setParameters("KC1FSZ","FN42",24);
 	encoder.start();
 }
@@ -216,10 +209,22 @@ void Driver_loop() {
 	if (HAL_GPIO_ReadPin(BUT0_GPIO_Port, BUT0_Pin)) {
 		but0.loadSample(false);
 	} else {
+		// True when low
 		but0.loadSample(true);
 	}
 
-	if (but0.getState() && but0.isEdge()) {
-		encoder.start();
+	if (but0.isEdge()) {
+		if (but0.getState()) {
+			// Reset time on all presses
+			encoder.start();
+		} else {
+			// Look for a long press
+			if (but0.getHighMs() > 2000) {
+				freq = 28124600;
+				Driver_displayFreq(freq);
+				encoder.setFreq(freq);
+				encoder.start();
+			}
+		}
 	}
 }
